@@ -31,12 +31,14 @@ test('combines case-insensitive name search with category filtering', async () =
   fireEvent.click(screen.getByRole('link', { name: 'Danh sách' }));
 
   const search = await screen.findByPlaceholderText('Nhập tên sản phẩm...');
-  const category = screen.getByLabelText('Danh mục');
-  fireEvent.change(category, { target: { value: 'Điện tử' } });
+  const category = screen.getByRole('combobox', { name: 'Danh mục' });
+  fireEvent.click(category);
+  fireEvent.click(screen.getByRole('option', { name: 'Điện tử' }));
   expect(screen.getByRole('link', { name: 'Chuột không dây' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Tai nghe có dây' })).toBeInTheDocument();
 
-  fireEvent.change(category, { target: { value: 'Tất cả' } });
+  fireEvent.click(category);
+  fireEvent.click(screen.getByRole('option', { name: 'Tất cả' }));
   fireEvent.change(search, { target: { value: 'BÚT' } });
   expect(screen.getByRole('link', { name: 'Bút bi Thiên Long' })).toBeInTheDocument();
   expect(screen.getByText((_, element) => element.classList.contains('result-count')))

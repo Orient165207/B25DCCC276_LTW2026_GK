@@ -1,10 +1,122 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import './App.css';
 
 const CATEGORIES = ['Văn phòng phẩm', 'Điện tử', 'Gia dụng'];
 
 const formatCurrency = (amount) => `${amount.toLocaleString('vi-VN')} đ`;
+
+function CategorySelect({ label, value, options, onChange, className = '' }) {
+  const id = useId();
+  const rootRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(() =>
+    Math.max(options.indexOf(value), 0),
+  );
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  const openAt = (index) => {
+    setActiveIndex(index);
+    setOpen(true);
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      if (!open) {
+        openAt(Math.max(options.indexOf(value), 0));
+        return;
+      }
+      setActiveIndex((currentIndex) =>
+        (currentIndex + direction + options.length) % options.length,
+      );
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      setActiveIndex(event.key === 'Home' ? 0 : options.length - 1);
+      setOpen(true);
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      if (!open) {
+        openAt(Math.max(options.indexOf(value), 0));
+      } else {
+        onChange(options[activeIndex]);
+        setOpen(false);
+      }
+    } else if (event.key === 'Tab') {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className={`field category-field ${className}`.trim()} ref={rootRef}>
+      <span id={`${id}-label`}>{label}</span>
+      <button
+        type="button"
+        className={`category-trigger${open ? ' is-open' : ''}`}
+        role="combobox"
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={`${id}-options`}
+        aria-activedescendant={open ? `${id}-option-${activeIndex}` : undefined}
+        onClick={() => {
+          if (open) {
+            setOpen(false);
+          } else {
+            openAt(Math.max(options.indexOf(value), 0));
+          }
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        <span>{value}</span>
+        <span className="category-chevron" aria-hidden="true" />
+      </button>
+      <div
+        className={`category-menu${open ? ' is-open' : ''}`}
+        id={`${id}-options`}
+        role="listbox"
+        aria-labelledby={`${id}-label`}
+        aria-hidden={!open}
+      >
+        {options.map((option, index) => (
+          <div
+            className={`category-option${option === value ? ' is-selected' : ''}${index === activeIndex && open ? ' is-active' : ''}`}
+            id={`${id}-option-${index}`}
+            key={option}
+            role="option"
+            aria-selected={option === value}
+            onMouseEnter={() => setActiveIndex(index)}
+            onClick={() => {
+              onChange(option);
+              setOpen(false);
+            }}
+          >
+            <span>{option}</span>
+            {option === value && <span className="category-check" aria-hidden="true">✓</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const getRoute = (pathname) => {
   if (pathname === '/') return { page: 'home' };
@@ -267,16 +379,12 @@ function App() {
                       onChange={(event) => setSearch(event.target.value)}
                     />
                   </label>
-                  <label className="field category-field">
-                    <span>Danh mục</span>
-                    <select
-                      value={categoryFilter}
-                      onChange={(event) => setCategoryFilter(event.target.value)}
-                    >
-                      <option>Tất cả</option>
-                      {CATEGORIES.map((category) => <option key={category}>{category}</option>)}
-                    </select>
-                  </label>
+                  <CategorySelect
+                    label="Danh mục"
+                    value={categoryFilter}
+                    options={['Tất cả', ...CATEGORIES]}
+                    onChange={setCategoryFilter}
+                  />
                 </div>
                 <p className="result-count">
                   Tìm thấy <strong>{visibleProducts.length}</strong> sản phẩm
@@ -370,12 +478,16 @@ function App() {
                   <span>Tên sản phẩm</span>
                   <input name="name" value={form.name} onChange={handleFormChange} />
                 </label>
-                <label className="field">
-                  <span>Danh mục</span>
-                  <select name="category" value={form.category} onChange={handleFormChange}>
-                    {CATEGORIES.map((category) => <option key={category}>{category}</option>)}
-                  </select>
-                </label>
+                <CategorySelect
+                  label="Danh mục"
+                  value={form.category}
+                  options={CATEGORIES}
+                  onChange={(category) => {
+                    setForm((currentForm) => ({ ...currentForm, category }));
+                    setFormError('');
+                  }}
+                  className="form-category-field"
+                />
                 <label className="field">
                   <span>Giá (đ)</span>
                   <input

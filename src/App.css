@@ -362,7 +362,119 @@ h2 {
 }
 
 .category-field {
+  position: relative;
+  z-index: 2;
   width: min(250px, 40%);
+}
+
+.form-category-field {
+  width: 100%;
+}
+
+.category-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  border: 1px solid #cfd7e2;
+  border-radius: 7px;
+  outline: none;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  transition: border-color 160ms ease, box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.category-trigger:hover {
+  border-color: #aebdd2;
+  background: #fbfcff;
+}
+
+.category-trigger:focus-visible,
+.category-trigger.is-open {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgb(49 95 197 / 12%);
+}
+
+.category-chevron {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-right: 1.5px solid #667085;
+  border-bottom: 1.5px solid #667085;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 180ms ease, border-color 160ms ease;
+}
+
+.category-trigger.is-open .category-chevron {
+  border-color: var(--blue);
+  transform: translateY(2px) rotate(225deg);
+}
+
+.category-menu {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 7px);
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  box-shadow: 0 10px 24px rgb(32 43 60 / 13%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-5px) scale(0.985);
+  transform-origin: top center;
+  visibility: hidden;
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+}
+
+.category-menu.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+}
+
+.category-option {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 130ms ease, color 130ms ease;
+}
+
+.category-option:hover,
+.category-option.is-active {
+  background: var(--blue-pale);
+  color: var(--blue);
+}
+
+.category-option.is-selected {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.category-option.is-selected.is-active {
+  background: #e5edff;
+}
+
+.category-check {
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .result-count {
