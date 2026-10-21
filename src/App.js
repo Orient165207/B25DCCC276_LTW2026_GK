@@ -3,8 +3,26 @@ import axios from 'axios';
 import './App.css';
 
 const CATEGORIES = ['Văn phòng phẩm', 'Điện tử', 'Gia dụng'];
+const PRODUCTS_STORAGE_KEY = 'inventory-products-v1';
 
 const formatCurrency = (amount) => `${amount.toLocaleString('vi-VN')} đ`;
+
+const isProductList = (value) =>
+  Array.isArray(value) &&
+  new Set(value.map((product) => product?.id)).size === value.length &&
+  value.every(
+    (product) =>
+      product &&
+      Number.isInteger(product.id) &&
+      product.id > 0 &&
+      typeof product.name === 'string' &&
+      product.name.trim() !== '' &&
+      CATEGORIES.includes(product.category) &&
+      Number.isFinite(product.price) &&
+      product.price >= 0 &&
+      Number.isInteger(product.quantity) &&
+      product.quantity >= 0,
+  );
 
 function CategorySelect({ label, value, options, onChange, className = '' }) {
   const id = useId();
@@ -133,6 +151,7 @@ function App() {
   const [route, setRoute] = useState(() => getRoute(window.location.pathname));
   const [products, setProducts] = useState(null);
   const [loadError, setLoadError] = useState(false);
+  const [persistenceError, setPersistenceError] = useState('');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Tất cả');
   const [form, setForm] = useState({
@@ -157,23 +176,51 @@ function App() {
 
   useEffect(() => {
     let active = true;
+    let savedProducts = null;
+
+    try {
+      const storedProducts = window.localStorage.getItem(PRODUCTS_STORAGE_KEY);
+      if (storedProducts !== null) {
+        const parsedProducts = JSON.parse(storedProducts);
+        if (isProductList(parsedProducts)) {
+          savedProducts = parsedProducts;
+          setProducts(parsedProducts);
+        } else {
+          window.localStorage.removeItem(PRODUCTS_STORAGE_KEY);
+          setPersistenceError('Dữ liệu đã lưu không hợp lệ; ứng dụng sẽ tải lại danh sách sản phẩm.');
+        }
+      }
+    } catch {
+      setPersistenceError('Không thể đọc dữ liệu sản phẩm đã lưu trong trình duyệt.');
+    }
 
     axios
       .get('/data/products.json')
       .then(({ data }) => {
-        if (!Array.isArray(data)) {
+        if (!isProductList(data)) {
           throw new Error('Dữ liệu sản phẩm không hợp lệ.');
         }
-        if (active) setProducts(data);
+        if (active && !savedProducts) setProducts(data);
       })
       .catch(() => {
-        if (active) setLoadError(true);
+        if (active && !savedProducts) setLoadError(true);
       });
 
     return () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!products) return;
+
+    try {
+      window.localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+      setPersistenceError('');
+    } catch {
+      setPersistenceError('Không thể lưu thay đổi. Hãy kiểm tra dung lượng hoặc cài đặt lưu trữ của trình duyệt.');
+    }
+  }, [products]);
 
   const navigate = (pathname, replace = false) => {
     const method = replace ? 'replaceState' : 'pushState';
@@ -301,6 +348,10 @@ function App() {
           </nav>
         </div>
       </header>
+
+      {persistenceError && (
+        <p className="persistence-notice" role="status">{persistenceError}</p>
+      )}
 
       <main className="page-content">
         {route.page === 'home' && (

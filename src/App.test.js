@@ -15,6 +15,7 @@ const products = [
 
 beforeEach(() => {
   window.history.replaceState({}, '', '/');
+  window.localStorage.clear();
   axios.get.mockResolvedValue({ data: products });
 });
 
@@ -82,6 +83,31 @@ test('shows a clear message when the products API fails', async () => {
   render(<App />);
 
   expect(await screen.findByText('Không tải được dữ liệu.')).toBeInTheDocument();
+});
+
+test('restores inventory changes after the app is reopened', async () => {
+  const firstRender = render(<App />);
+  fireEvent.click(screen.getByRole('link', { name: 'Danh sách' }));
+  const search = await screen.findByPlaceholderText('Nhập tên sản phẩm...');
+  fireEvent.change(search, { target: { value: 'Vở' } });
+
+  const notebookRow = screen.getByRole('row', { name: /Vở kẻ ngang 200 trang/ });
+  fireEvent.click(
+    within(notebookRow).getByRole('button', {
+      name: 'Tăng tồn kho Vở kẻ ngang 200 trang',
+    }),
+  );
+  expect(JSON.parse(window.localStorage.getItem('inventory-products-v1'))[1].quantity)
+    .toBe(4);
+
+  firstRender.unmount();
+  window.history.replaceState({}, '', '/products');
+  render(<App />);
+
+  const restoredSearch = await screen.findByPlaceholderText('Nhập tên sản phẩm...');
+  fireEvent.change(restoredSearch, { target: { value: 'Vở' } });
+  const restoredRow = screen.getByRole('row', { name: /Vở kẻ ngang 200 trang/ });
+  expect(within(restoredRow).getByText('4')).toBeInTheDocument();
 });
 
 test('requires all form fields and deletes products immediately', async () => {
